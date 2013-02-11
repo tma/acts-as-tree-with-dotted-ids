@@ -172,7 +172,11 @@ module ActiveRecord
         
         # Returns the depth of the node, root nodes have a depth of 0
         def depth
-          self.dotted_ids.scan(/\./).size
+          if self.dotted_ids.present?
+            self.dotted_ids.scan(/\./).size
+          else
+            (self.parent.try(:depth) || -1) + 1
+          end
         end
                 
       protected
