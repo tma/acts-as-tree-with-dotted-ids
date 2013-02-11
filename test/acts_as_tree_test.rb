@@ -373,5 +373,13 @@ class TestDottedIdTree < Test::Unit::TestCase
      assert_equal 2, @subchild.depth
    end
    
+   def test_depth_unsaved_root
+     assert_equal 0, TreeMixin.new.depth
+   end
+   
+   def test_depth_unsaved_child
+     child = @tree.children.build(:name => 'Child')
+     assert_equal 1, child.depth
+   end
 end
 
