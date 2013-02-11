@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = "acts-as-tree-with-dotted-ids"
-  s.version = "1.1.0"
+  s.version = "1.1.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["David Heinemeier Hansson", "Xavier Defrang"]
