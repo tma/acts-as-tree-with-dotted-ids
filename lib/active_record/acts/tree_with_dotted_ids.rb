@@ -53,8 +53,8 @@ module ActiveRecord
           belongs_to :parent, :class_name => name, :foreign_key => configuration[:foreign_key], :counter_cache => configuration[:counter_cache]
           
 
-          has_many :children, :class_name => name, :foreign_key => configuration[:foreign_key], 
-            :order => configuration[:order], :dependent => :destroy, &b
+          has_many :children, -> { order(configuration[:order]) }, :class_name => name, :foreign_key => configuration[:foreign_key], 
+                   :dependent => :destroy, &b
 
           after_save                 :assign_dotted_ids
           after_validation           :update_dotted_ids, :on => :update
@@ -63,12 +63,12 @@ module ActiveRecord
             include ActiveRecord::Acts::TreeWithDottedIds::InstanceMethods
 
             def self.roots
-              res = find(:all, :conditions => "#{configuration[:foreign_key]} IS NULL", :order => #{configuration[:order].nil? ? "nil" : %Q{"#{configuration[:order]}"}})
+              res = where("#{configuration[:foreign_key]} IS NULL").order(#{configuration[:order].nil? ? "nil" : %Q{"#{configuration[:order]}"}})
 
             end
 
             def self.root
-              find(:first, :conditions => "#{configuration[:foreign_key]} IS NULL", :order => #{configuration[:order].nil? ? "nil" : %Q{"#{configuration[:order]}"}})
+              where("#{configuration[:foreign_key]} IS NULL").order(#{configuration[:order].nil? ? "nil" : %Q{"#{configuration[:order]}"}}).first
             end
             
             def parent_foreign_key_changed?
@@ -105,7 +105,7 @@ module ActiveRecord
         def ancestors
           if self.dotted_ids
             ids = self.dotted_ids.split('.')[0...-1]
-            self.class.find(:all, :conditions => {:id => ids}, :order => 'dotted_ids DESC')
+            self.class.where(:id => ids).order('dotted_ids DESC')
           else
             node, nodes = self, []
             nodes << node = node.parent while node.parent
@@ -141,7 +141,7 @@ module ActiveRecord
         #   subchild1.self_and_siblings # => [subchild1, subchild2]
         def self_and_siblings
           #parent ? parent.children : self.class.roots
-          self.class.find(:all, :conditions => {:parent_id => self.parent_id})
+          self.class.where(:parent_id => self.parent_id)
         end
         
         #
@@ -187,10 +187,10 @@ module ActiveRecord
         end
         
         # Find all children with the given dotted_id prefix
-        # *options* will be passed to to find(:all)
-        # FIXME: use merge_conditions when it will be part of the public API
-        def find_all_children_with_dotted_ids(prefix = nil, options = {})
-          self.class.find(:all, options.update(:conditions => ['dotted_ids LIKE ?', dotted_id_like_pattern(prefix)]))
+        # *extra_scope* will be combine with dotted_ids LIKE
+        # FIXME: use extra_scope when it will be part of the public API
+        def find_all_children_with_dotted_ids(prefix = nil, extra_scope = self.class.where('1=1'))
+          extra_scope.where('dotted_ids LIKE ?', dotted_id_like_pattern(prefix))
         end
         
         # Generates the dotted_ids for this node
