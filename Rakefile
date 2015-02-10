@@ -25,7 +25,7 @@ begin
     gem.homepage = 'http://github.com/tma/acts-as-tree-with-dotted-ids'
     gem.authors = ['David Heinemeier Hansson', 'Xavier Defrang']
     gem.files = Dir.glob('lib/**/*.rb')
-    gem.add_dependency 'activerecord', '~> 3.0', '>= 3.0.0'
+    gem.add_dependency 'activerecord', '~> 4.0', '>= 4.0.0'
   end
   Jeweler::GemcutterTasks.new
 rescue LoadError
