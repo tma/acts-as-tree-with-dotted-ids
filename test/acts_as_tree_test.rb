@@ -22,14 +22,14 @@ class Test::Unit::TestCase
   end
 end
 
-ActiveRecord::Base.establish_connection(:adapter => "sqlite3", :database => ":memory:")
+ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: ':memory:')
 
 # AR keeps printing annoying schema statements
 $stdout = StringIO.new
 
 def setup_db
   ActiveRecord::Base.logger
-  ActiveRecord::Schema.define(:version => 1) do
+  ActiveRecord::Schema.define(version: 1) do
     create_table :mixins do |t|
       t.column :type, :string
       t.column :parent_id, :integer
@@ -49,16 +49,16 @@ class Mixin < ActiveRecord::Base
 end
 
 class TreeMixin < Mixin
-  acts_as_tree_with_dotted_ids :foreign_key => "parent_id", :order => "id"
+  acts_as_tree_with_dotted_ids foreign_key: :parent_id, order: :id
 end
 
 class TreeMixinWithoutOrder < Mixin
-  acts_as_tree_with_dotted_ids :foreign_key => "parent_id"
+  acts_as_tree_with_dotted_ids foreign_key: :parent_id
 end
 
 class RecursivelyCascadedTreeMixin < Mixin
-  acts_as_tree_with_dotted_ids :foreign_key => "parent_id"
-  has_one :first_child, :class_name => 'RecursivelyCascadedTreeMixin', :foreign_key => :parent_id
+  acts_as_tree_with_dotted_ids foreign_key: :parent_id
+  has_one :first_child, class_name: 'RecursivelyCascadedTreeMixin', foreign_key: :parent_id
 end
 
 class TreeTest < Test::Unit::TestCase
@@ -66,9 +66,9 @@ class TreeTest < Test::Unit::TestCase
   def setup
     setup_db
     @root1 = TreeMixin.create!
-    @root_child1 = TreeMixin.create! :parent_id => @root1.id
-    @child1_child = TreeMixin.create! :parent_id => @root_child1.id
-    @root_child2 = TreeMixin.create! :parent_id => @root1.id
+    @root_child1 = TreeMixin.create! parent_id: @root1.id
+    @child1_child = TreeMixin.create! parent_id: @root_child1.id
+    @root_child2 = TreeMixin.create! parent_id: @root1.id
     @root2 = TreeMixin.create!
     @root3 = TreeMixin.create!
   end
@@ -160,16 +160,16 @@ class TreeTestWithEagerLoading < Test::Unit::TestCase
     teardown_db
     setup_db
     @root1 = TreeMixin.create!
-    @root_child1 = TreeMixin.create! :parent_id => @root1.id
-    @child1_child = TreeMixin.create! :parent_id => @root_child1.id
-    @root_child2 = TreeMixin.create! :parent_id => @root1.id
+    @root_child1 = TreeMixin.create! parent_id: @root1.id
+    @child1_child = TreeMixin.create! parent_id: @root_child1.id
+    @root_child2 = TreeMixin.create! parent_id: @root1.id
     @root2 = TreeMixin.create!
     @root3 = TreeMixin.create!
 
     @rc1 = RecursivelyCascadedTreeMixin.create!
-    @rc2 = RecursivelyCascadedTreeMixin.create! :parent_id => @rc1.id
-    @rc3 = RecursivelyCascadedTreeMixin.create! :parent_id => @rc2.id
-    @rc4 = RecursivelyCascadedTreeMixin.create! :parent_id => @rc3.id
+    @rc2 = RecursivelyCascadedTreeMixin.create! parent_id: @rc1.id
+    @rc3 = RecursivelyCascadedTreeMixin.create! parent_id: @rc2.id
+    @rc4 = RecursivelyCascadedTreeMixin.create! parent_id: @rc3.id
   end
 
   def teardown
@@ -177,7 +177,7 @@ class TreeTestWithEagerLoading < Test::Unit::TestCase
   end
 
   def test_eager_association_loading
-    roots = TreeMixin.find(:all, :include => :children, :conditions => "mixins.parent_id IS NULL", :order => "mixins.id")
+    roots = TreeMixin.where('mixins.parent_id' => nil).order('mixins.id').includes(:children)
     assert_equal [@root1, @root2, @root3], roots
     assert_no_queries do
       assert_equal 2, roots[0].children.size
@@ -187,17 +187,17 @@ class TreeTestWithEagerLoading < Test::Unit::TestCase
   end
 
   def test_eager_association_loading_with_recursive_cascading_three_levels_has_many
-    root_node = RecursivelyCascadedTreeMixin.find(:first, :include => { :children => { :children => :children } }, :order => 'mixins.id')
+    root_node = RecursivelyCascadedTreeMixin.order(:id).includes(children: { children: :children }).first
     assert_equal @rc4, assert_no_queries { root_node.children.first.children.first.children.first }
   end
 
   def test_eager_association_loading_with_recursive_cascading_three_levels_has_one
-    root_node = RecursivelyCascadedTreeMixin.find(:first, :include => { :first_child => { :first_child => :first_child } }, :order => 'mixins.id')
+    root_node = RecursivelyCascadedTreeMixin.order(:id).includes(first_child: { first_child: :first_child }).first
     assert_equal @rc4, assert_no_queries { root_node.first_child.first_child.first_child }
   end
 
   def test_eager_association_loading_with_recursive_cascading_three_levels_belongs_to
-    leaf_node = RecursivelyCascadedTreeMixin.find(:first, :include => { :parent => { :parent => :parent } }, :order => 'mixins.id DESC')
+    leaf_node = RecursivelyCascadedTreeMixin.order(id: :desc).includes(parent: { parent: :parent }).first
     assert_equal @rc1, assert_no_queries { leaf_node.parent.parent.parent }
   end
 end
@@ -227,10 +227,10 @@ class TestDottedIdTree < Test::Unit::TestCase
 
   def setup
     setup_db
-    @tree = TreeMixin.create(:name => 'Root')
-    @child = @tree.children.create(:name => 'Child')
-    @subchild = @child.children.create(:name => 'Subchild')
-    @new_root = TreeMixin.create!(:name => 'New Root')
+    @tree = TreeMixin.create(name: 'Root')
+    @child = @tree.children.create(name: 'Child')
+    @subchild = @child.children.create(name: 'Subchild')
+    @new_root = TreeMixin.create!(name: 'New Root')
   end
 
   def teardown
@@ -279,20 +279,20 @@ class TestDottedIdTree < Test::Unit::TestCase
   def test_all_children
 
     kids = @tree.all_children
-    assert_kind_of Array, kids
+    assert_kind_of TreeMixin::ActiveRecord_Relation, kids
     assert kids.size == 2
     assert !kids.include?(@tree)
     assert kids.include?(@child)
     assert kids.include?(@subchild)
 
     kids = @child.all_children
-    assert_kind_of Array, kids
+    assert_kind_of TreeMixin::ActiveRecord_Relation, kids
     assert kids.size == 1
     assert !kids.include?(@child)
     assert kids.include?(@subchild)
 
     kids = @subchild.all_children
-    assert_kind_of Array, kids
+    assert_kind_of TreeMixin::ActiveRecord_Relation, kids
     assert kids.empty?
 
   end
@@ -355,13 +355,13 @@ class TestDottedIdTree < Test::Unit::TestCase
 
    def test_rebuild_dotted_ids
 
-     TreeMixin.update_all('dotted_ids = NULL')
-     assert TreeMixin.find(:all).all? { |n| n.dotted_ids.blank? }
+     TreeMixin.update_all(dotted_ids: nil)
+     assert TreeMixin.all.all? { |n| n.dotted_ids.blank? }
      @subchild.reload
      assert_nil @subchild.dotted_ids
 
      TreeMixin.rebuild_dotted_ids!
-     assert TreeMixin.find(:all).all? { |n| n.dotted_ids.present? }
+     assert TreeMixin.all.all? { |n| n.dotted_ids.present? }
      @subchild.reload
      assert_equal "#{@tree.id}.#{@child.id}.#{@subchild.id}", @subchild.dotted_ids
 
@@ -378,7 +378,7 @@ class TestDottedIdTree < Test::Unit::TestCase
    end
 
    def test_depth_unsaved_child
-     child = @tree.children.build(:name => 'Child')
+     child = @tree.children.build(name: 'Child')
      assert_equal 1, child.depth
    end
 end
