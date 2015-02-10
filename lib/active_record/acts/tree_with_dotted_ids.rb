@@ -39,7 +39,7 @@ module ActiveRecord
       # The following class methods are added
       # * <tt>traverse</tt> - depth-first traversal of the tree (warning: it does *not* rely on the dotted_ids as it is used to rebuild the tree)
       # * <tt>rebuild_dotted_ids!</tt> - rebuilt the dotted IDs for the whole tree, use this once to migrate an existing +acts_as_tree+ model to +acts_as_tree_with_dotted_ids+
-      
+
       module ClassMethods
         # Configuration options are:
         #
@@ -51,9 +51,9 @@ module ActiveRecord
           configuration.update(options) if options.is_a?(Hash)
 
           belongs_to :parent, :class_name => name, :foreign_key => configuration[:foreign_key], :counter_cache => configuration[:counter_cache]
-          
 
-          has_many :children, -> { order(configuration[:order]) }, :class_name => name, :foreign_key => configuration[:foreign_key], 
+
+          has_many :children, -> { order(configuration[:order]) }, :class_name => name, :foreign_key => configuration[:foreign_key],
                    :dependent => :destroy, &b
 
           after_save                 :assign_dotted_ids
@@ -70,15 +70,15 @@ module ActiveRecord
             def self.root
               where("#{configuration[:foreign_key]} IS NULL").order(#{configuration[:order].nil? ? "nil" : %Q{"#{configuration[:order]}"}}).first
             end
-            
+
             def parent_foreign_key_changed?
               #{configuration[:foreign_key]}_changed?
             end
-            
+
           EOV
         end
-        
-        # Performs a depth-first traversal of the tree, yielding each node to the given block 
+
+        # Performs a depth-first traversal of the tree, yielding each node to the given block
         def traverse(nodes = nil, &block)
           nodes ||= self.roots
           nodes.each do |node|
@@ -86,7 +86,7 @@ module ActiveRecord
             traverse(node.children, &block)
           end
         end
-        
+
         # Traverse the whole tree from roots to leaves and rebuild the dotted_ids path
         # Call it from your migration to upgrade an existing acts_as_tree model.
         def rebuild_dotted_ids!
@@ -94,7 +94,7 @@ module ActiveRecord
             traverse { |node| node.dotted_ids = nil; node.save! }
           end
         end
-        
+
       end
 
       module InstanceMethods
@@ -112,8 +112,8 @@ module ActiveRecord
             nodes
           end
         end
-        
-        # 
+
+        #
         def self_and_ancestors
           [self] + ancestors
         end
@@ -143,33 +143,33 @@ module ActiveRecord
           #parent ? parent.children : self.class.roots
           self.class.where(:parent_id => self.parent_id)
         end
-        
+
         #
         # root.ancestor_of?(subchild1) # => true
         # subchild1.ancestor_of?(child1) # => false
         def ancestor_of?(node)
           node.dotted_ids.length > self.dotted_ids.length && node.dotted_ids.starts_with?(self.dotted_ids)
         end
-        
+
         #
         # subchild1.descendant_of?(child1) # => true
         # root.descendant_of?(subchild1) # => false
         def descendant_of?(node)
           self.dotted_ids.length > node.dotted_ids.length && self.dotted_ids.starts_with?(node.dotted_ids)
         end
-        
+
         # Returns all children of the current node
         # root.all_children # => [child1, subchild1, subchild2]
         def all_children
           find_all_children_with_dotted_ids
         end
-        
+
         # Returns all children of the current node
         # root.self_and_all_children # => [root, child1, subchild1, subchild2]
         def self_and_all_children
           [self] + all_children
         end
-        
+
         # Returns the depth of the node, root nodes have a depth of 0
         def depth
           if self.dotted_ids.present?
@@ -178,44 +178,44 @@ module ActiveRecord
             (self.parent.try(:depth) || -1) + 1
           end
         end
-                
+
       protected
-      
+
         # Tranforms a dotted_id string into a pattern usable with a SQL LIKE statement
         def dotted_id_like_pattern(prefix = nil)
           (prefix || self.dotted_ids) + '.%'
         end
-        
+
         # Find all children with the given dotted_id prefix
         # *extra_scope* will be combine with dotted_ids LIKE
         # FIXME: use extra_scope when it will be part of the public API
         def find_all_children_with_dotted_ids(prefix = nil, extra_scope = self.class.where('1=1'))
           extra_scope.where('dotted_ids LIKE ?', dotted_id_like_pattern(prefix))
         end
-        
+
         # Generates the dotted_ids for this node
         def build_dotted_ids
           self.parent ? "#{self.parent.dotted_ids}.#{self.id}" : self.id.to_s
         end
-        
+
         # After create, adds the dotted id's
         def assign_dotted_ids
           self.update_attribute(:dotted_ids, build_dotted_ids) if self.dotted_ids.blank?
         end
-        
+
         # After validation on update, rebuild dotted ids if necessary
         def update_dotted_ids
           return unless parent_foreign_key_changed?
           old_dotted_ids = self.dotted_ids
           old_dotted_ids_regex = Regexp.new("^#{Regexp.escape(old_dotted_ids)}(.*)")
           self.dotted_ids = build_dotted_ids
-          replace_pattern = "#{self.dotted_ids}\\1"          
+          replace_pattern = "#{self.dotted_ids}\\1"
           find_all_children_with_dotted_ids(old_dotted_ids).each do |node|
             new_dotted_ids = node.dotted_ids.gsub(old_dotted_ids_regex, replace_pattern)
             node.update_attribute(:dotted_ids, new_dotted_ids)
           end
         end
-        
+
       end
     end
   end
